@@ -5,8 +5,11 @@ Image Stitching Algrithm
 Usage: import the module (see Jupyter notebooks for examples), or run from
        the command line as such:
 
-    # Stitch LeadingEdge of Blade A wih refinement
-    python3 image_stitching.py --dataset /home/uob/Downloads/gossip-assets-files_new.xlsx --refinement True --output /home/uob/drone_localization/output --beg 3 --end 14 --visulization True
+    # Stitch LeadingEdge of Blade A without refinement
+    python3 image_stitching.py --dataset '/home/temp-dhalion-linux/yixiang/Dataset/gossip-assets-files_new.xlsx' --output /home/uob/drone_localization/output --beg 3 --end 14
+
+    # Stitch LeadingEdge of Blade A with refinement
+    python3 image_stitching.py --dataset '/home/temp-dhalion-linux/yixiang/Dataset/gossip-assets-files_new.xlsx' --output /home/uob/drone_localization/output --beg 3 --end 14 --refinement True --visulization True --weight /home/temp-dhalion-linux/yixiang/localisation/3rd-party/maks_rcnn_blade_0046.h5 --point_cloud_model_path /home/temp-dhalion-linux/yixiang/Dataset/advanced_model/manual_ritual_turbine_points_blade.ply
 
 """
 
@@ -93,80 +96,6 @@ class Localization():
 
         return x,y
 
-    # # Stitching adjacent image 
-    # def stitching(self, init_img,img, drone_tran,drone_rot,distance ,pre_image_location, blade_side ,blade_position,yaw,image_location):
-
-    #     x = -drone_tran[0] * 1000 
-    #     y = drone_tran[1] * 1000
-
-    #     if blade_side == "LeadingEdge":
-    #         z = (drone_tran[2] - self.centre_2_blade) * 1000
-    #     elif blade_side == "TrailingEdge":
-    #         z = (drone_tran[2] + self.centre_2_TE) * 1000
-
-    #     else:
-    #         z = distance * 1000
-    #         x,y = self.correction_with_rotation(drone_rot,x,y,z,blade_position,yaw)
-
-
-    #     move_x = int((x/z) * self.intrinsic_matric_K[0,0])
-    #     move_y = int((y/z) * self.intrinsic_matric_K[1,1])
-        
-    #     print(move_x,move_y)
-
-    #     image_location.append([move_x,move_y])
-    #     # if abs(move_x + 77) > 40:
-    #     #     move_x = -77
-            
-    #     if move_x < -self.image_width:
-    #         move_x = -self.image_width
-    #     elif move_x > self.image_width:
-    #         move_x = self.image_width
-            
-    #     if move_y < -self.image_heigh:
-    #         move_y = -self.image_heigh
-    #     elif move_y > self.image_heigh:
-    #         move_y = self.image_heigh
-
-    #     cur_image_location_y = pre_image_location[1] + move_y if pre_image_location[1] + move_y < 0 else 0
-    #     cur_image_location_x = pre_image_location[0] + move_x if pre_image_location[0] + move_x > 0 else 0
-        
-    #     cur_image_location = [cur_image_location_x,cur_image_location_y]
-
-    #     if move_y > 0 :
-            
-    #         img_width = int(max(init_img.shape[1] + abs(move_x), init_img.shape[1]))
-    #         img_height = int(max(cur_image_location[1] + init_img.shape[0] +  abs(move_y), init_img.shape[0]))
-
-    #         blank_image = np.zeros((img_height,img_width,3), np.uint8)
-
-    #         if move_x > 0:
-            
-    #             blank_image[img_height - init_img.shape[0]:img_height,0:init_img.shape[1]] = init_img
-    #             blank_image[abs(cur_image_location[1]):abs(cur_image_location[1]) + img.shape[0], cur_image_location[0]:cur_image_location[0] + img.shape[1]] = img
-    #         else:
-
-    #             blank_image[img_height - init_img.shape[0]:img_height,img_width - init_img.shape[1]:img_width] = init_img
-    #             blank_image[abs(cur_image_location[1]):abs(cur_image_location[1]) + img.shape[0], cur_image_location[0]:cur_image_location[0] + img.shape[1]] = img
-
-    #     elif move_y <= 0:
-    #         img_width = int(max(init_img.shape[1] + abs(move_x), init_img.shape[1]))
-    #         img_height = int(max(-cur_image_location[1] + img.shape[0], init_img.shape[0]))
-
-    #         blank_image = np.zeros((img_height,img_width,3), np.uint8)
-
-        
-    #         if move_x > 0:
-    #             blank_image[0:init_img.shape[0],0:init_img.shape[1]] = init_img
-    #             blank_image[abs(cur_image_location[1]):abs(cur_image_location[1]) + img.shape[0],abs(cur_image_location[0]):abs(cur_image_location[0]) + img.shape[1]] = img
-    #         else:
-    #             blank_image[0:init_img.shape[0],abs(move_x):img_width] = init_img
-    #             blank_image[abs(cur_image_location[1]):abs(cur_image_location[1]) + img.shape[0],abs(cur_image_location[0]):abs(cur_image_location[0]) + img.shape[1]] = img
-
-        
-    #     return blank_image, cur_image_location
-
-    # Stitching adjacent image 
     def calculate_img_pos(self, drone_tran,drone_rot,distance , blade_side ,blade_position,yaw,image_location):
 
         x = -drone_tran[0] * 1000 
@@ -185,7 +114,7 @@ class Localization():
         move_x = int((x/z) * self.intrinsic_matric_K[0,0])
         move_y = int((y/z) * self.intrinsic_matric_K[1,1])
         
-        print(move_x,move_y)
+        # print(move_x,move_y)
 
         image_location.append([move_x,move_y])
        
@@ -271,7 +200,7 @@ class Localization():
                 if args.refinement == 'True':
                     detected_blade = refinment.blade_mask_detection(cur_image,mask_rcnn_model)
                     cur_cam_position_trans, cur_cam_rotation = refinment.cam_refinment(image_stitching.intrinsic_matric_K,cur_cam_position_trans,cur_cam_rotation,cur_image,model,detected_blade,args.visulization == 'True')
-                    cv.imwrite("/home/uob/drone_localization/output/"+drone_gps_data[i][4], cur_image)
+                    cv.imwrite(os.path.join(args.output + drone_gps_data[i][4], cur_image))
 
                 cam_move = image_stitching.calcu_cam_move(cur_cam_position_trans,cam_position_trans)
                 rot_move = np.array(cur_cam_rotation) - np.array(cam_rotation)
