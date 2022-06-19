@@ -27,20 +27,20 @@ import refinement
 import math
 
 class Localization():
+    def __init__(self):        
+        self.intrinsic_matric_K = np.array([
+                                        [1787.69, 0, 320],
+                                        [0, 2008.34, 240],
+                                        [0, 0, 1]
+                                    ], dtype='f') # for image size (640*480)
 
-    intrinsic_matric_K = np.array([
-                                    [1787.69, 0, 320],
-                                    [0, 2008.34, 240],
-                                    [0, 0, 1]
-                                ], dtype='f') # for image size (640*480)
+        self.image_width = 640
+        self.image_heigh = 480
 
-    image_width = 640
-    image_heigh = 480
+        self.tower_height = 63.8
 
-    tower_height = 63.8
-
-    centre_2_blade = 6.3 # The distance from coordinate centre to blade surface
-    centre_2_TE = 3.8
+        self.centre_2_blade = 6.3 # The distance from coordinate centre to blade surface
+        self.centre_2_TE = 3.8
 
 
     def resize (self, img, width, height):
@@ -113,8 +113,7 @@ class Localization():
 
         move_x = int((x/z) * self.intrinsic_matric_K[0,0])
         move_y = int((y/z) * self.intrinsic_matric_K[1,1])
-        
-        # print(move_x,move_y)
+    
 
         image_location.append([move_x,move_y])
        

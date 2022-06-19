@@ -166,37 +166,6 @@ class refinement():
 
             drone_tran = drone_tran + dx[0:3]
 
-
-        # refine the postion and rotation
-        # for i in range(10):
-        #     blade_points = self.fproject(intrinsic_matric_K,drone_tran,drone_rot,img,model)
-        #     # print(blade_points)
-        #     refer = self.point_pair(nbrs,blade_points,point_list)
-
-        #     J_1 = np.array(((self.fproject(intrinsic_matric_K,drone_tran + [e,0,0],drone_rot,img,model)).flatten() - blade_points.flatten())/e)
-        #     J_2 = np.array(((self.fproject(intrinsic_matric_K,drone_tran + [0,e,0],drone_rot,img,model)).flatten() - blade_points.flatten())/e)
-        #     J_3 = np.array(((self.fproject(intrinsic_matric_K,drone_tran + [0,0,e],drone_rot,img,model)).flatten() - blade_points.flatten())/e)
-
-        #     J_4 = np.array(((self.fproject(intrinsic_matric_K,drone_tran, drone_rot + [e,0,0],img,model)).flatten() - blade_points.flatten())/e)
-        #     J_5 = np.array(((self.fproject(intrinsic_matric_K,drone_tran, drone_rot + [0,e,0],img,model)).flatten() - blade_points.flatten())/e)
-        #     # J_6 = np.array(((fproject(intrinsic_matric_K,drone_tran, drone_rot + [0,0,e],img,model)).flatten() - blade_points.flatten())/e)
-
-        #     # J = np.asarray([J_1, J_2, J_3,J_4, J_5, J_6])
-
-        #     J = np.asarray([J_1, J_2, J_3,J_4, J_5])
-
-        #     dy = refer.flatten() - blade_points.flatten()
-        #     dx = np.linalg.pinv(J.T).dot(dy.T)
-        #     # print(dx)
-        #     norm   = np.linalg.norm(dy, axis=0)
-
-        #     drone_tran = drone_tran + dx[0:3]
-        #     drone_rot[0:2] = drone_rot[0:2] + dx[3:5]
-        #     # drone_rot = drone_rot + dx[3:6]
-        #     # print(drone_tran,drone_rot)
-        #     if abs(np.linalg.norm(dx[0:3])/np.linalg.norm(drone_tran) + np.linalg.norm(dx[3:6])/np.linalg.norm(drone_rot)) <= 0.0005:
-        #         break
-
         if visualization:
             num_point = self.visulize_proj(intrinsic_matric_K,drone_tran,drone_rot,img,model,color = [255,255,0])
 
