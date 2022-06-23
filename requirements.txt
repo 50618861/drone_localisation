@@ -1,7 +1,13 @@
-opencv-python
-open3d
-numpy
-pandas
-scipy
-sklearn
-tensorflow-gpu
+opencv-python == 3.4.1.15
+open3d == 0.9.0
+numpy == 1.16.3
+pandas == 1.0.1
+scipy == 1.4.1
+scikit-learn == 0.21.2
+tensorflow-gpu == 1.14.0
+h5py == 2.10.0
+Pillow == 5.3.0
+Cython == 0.29.19
+matplotlib == 3.2.0
+keras == 2.2.5
+imgaug == 0.4.0
