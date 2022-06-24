@@ -12,7 +12,7 @@ import os,sys
 import tensorflow as tf
 
 # Root directory of mask_rcnn
-ROOT_DIR = os.path.abspath("/home/uob/Documents/Mask_RCNN/")
+ROOT_DIR = os.path.abspath("3rd-party/Mask_RCNN/")
 
 # Import Mask RCNN
 sys.path.append(ROOT_DIR)  # To find local version of the library
