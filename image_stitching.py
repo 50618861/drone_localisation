@@ -198,7 +198,7 @@ class Localization():
                 if args.refinement == 'True':
                     detected_blade = refinment.blade_mask_detection(cur_image,mask_rcnn_model)
                     cur_cam_position_trans, cur_cam_rotation = refinment.cam_refinment(image_stitching.intrinsic_matric_K,cur_cam_position_trans,cur_cam_rotation,cur_image,model,detected_blade,args.visulization == 'True')
-                    cv.imwrite(os.path.join(args.output + drone_gps_data[i][4], cur_image))
+                    cv.imwrite(os.path.join(args.output, drone_gps_data[i][4]), cur_image)
 
                 cam_move = image_stitching.calcu_cam_move(cur_cam_position_trans,cam_position_trans)
                 rot_move = np.array(cur_cam_rotation) - np.array(cam_rotation)
