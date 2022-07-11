@@ -13,7 +13,7 @@ import skimage.io
 from imgaug import augmenters as iaa
 
 # Root directory of the project
-ROOT_DIR = os.path.abspath("/home/uob/Documents/Mask_RCNN")
+ROOT_DIR = os.path.abspath("/data/coq18yj/Mask_RCNN/")
 
 sys.path.append(ROOT_DIR)  # To find local version of the library
 from mrcnn.config import Config
@@ -29,6 +29,7 @@ DEFAULT_LOGS_DIR = os.path.join(ROOT_DIR, "logs")
 # Save submission files here
 RESULTS_DIR = os.path.join(ROOT_DIR, "results")
 
+CUDA_VISIBLE_DEVICES=0
 ############################################################
 #  Configurations
 ############################################################
@@ -36,38 +37,39 @@ RESULTS_DIR = os.path.join(ROOT_DIR, "results")
 class BladeConfig(Config):
     """Configuration for training on the nucleus segmentation dataset."""
     # Give the configuration a recognizable name
-    NAME = "cam"
+    NAME = "blade"
 
     # Adjust depending on your GPU memory
-    IMAGES_PER_GPU = 4
+    IMAGES_PER_GPU = 8
 
     # Number of classes (including background)
     NUM_CLASSES = 1 + 1  # Background + nucleus
 
     # Number of training and validation steps per epoch
-    STEPS_PER_EPOCH = 100
-
+    # STEPS_PER_EPOCH = 20000//IMAGES_PER_GPU
+    STEPS_PER_EPOCH = 1000
+    VALIDATION_STEPS = 1
     # Don't exclude based on confidence. Since we have two classes
     # then 0.5 is the minimum anyway as it picks between nucleus and BG
     DETECTION_MIN_CONFIDENCE = 0.7
 
     # Backbone network architecture
     # Supported values are: resnet50, resnet101
-    BACKBONE = "resnet101"
+    BACKBONE = "resnet50"
 
     # Input image resizing
     # Random crops of size 512x512
     # IMAGE_RESIZE_MODE = "crop"
-    # IMAGE_MIN_DIM = 512
-    # IMAGE_MAX_DIM = 512
-    # IMAGE_MIN_SCALE = 2.0
-    IMAGE_RESIZE_MODE = "square"
-    IMAGE_MIN_DIM = 512
+    IMAGE_MIN_DIM = 400
+    
     IMAGE_MAX_DIM = 512
-    IMAGE_MIN_SCALE = 1.0
+    # IMAGE_MIN_SCALE = 2.0
+    # IMAGE_RESIZE_MODE = "crop"
+    # IMAGE_MIN_DIM = 480
+    # IMAGE_MAX_DIM = 640
 
     # Length of square anchor side in pixels
-    RPN_ANCHOR_SCALES = (8, 16, 32, 64, 128)
+    # RPN_ANCHOR_SCALES = (8, 16, 32, 64, 128)
 
     # ROIs kept after non-maximum supression (training and inference)
     POST_NMS_ROIS_TRAINING = 1000
@@ -75,39 +77,39 @@ class BladeConfig(Config):
 
     # Non-max suppression threshold to filter RPN proposals.
     # You can increase this during training to generate more propsals.
-    RPN_NMS_THRESHOLD = 0.9
+    RPN_NMS_THRESHOLD = 0.95
 
     # How many anchors per image to use for RPN training
-    # RPN_TRAIN_ANCHORS_PER_IMAGE = 64
+    RPN_TRAIN_ANCHORS_PER_IMAGE = 256
 
     # Image mean (RGB)
     MEAN_PIXEL = np.array([43.53, 39.56, 48.22])
 
     # If enabled, resizes instance masks to a smaller size to reduce
     # memory load. Recommended when using high-resolution images.
-    USE_MINI_MASK = True
-    MINI_MASK_SHAPE = (56, 56)  # (height, width) of the mini-mask
+    # USE_MINI_MASK = False
+    MINI_MASK_SHAPE = (102, 102)  # (height, width) of the mini-mask
 
     # Number of ROIs per image to feed to classifier/mask heads
     # The Mask RCNN paper uses 512 but often the RPN doesn't generate
     # enough positive proposals to fill this and keep a positive:negative
     # ratio of 1:3. You can increase the number of proposals by adjusting
     # the RPN NMS threshold.
-    TRAIN_ROIS_PER_IMAGE = 128
+    # TRAIN_ROIS_PER_IMAGE = 128
     LEARNING_RATE = 0.002
     # Maximum number of ground truth instances to use in one image
-    # MAX_GT_INSTANCES = 200
+    MAX_GT_INSTANCES = 200
 
     # Max number of final detections per image
-    # DETECTION_MAX_INSTANCES = 400
+    DETECTION_MAX_INSTANCES = 400
 
-    # LOSS_WEIGHTS = {
-    # "rpn_class_loss": 1.,
-    # "rpn_bbox_loss": 1.,
-    # "mrcnn_class_loss": 1.,
-    # "mrcnn_bbox_loss": 1.,
-    # "mrcnn_mask_loss": 1.
-    # }
+    LOSS_WEIGHTS = {
+    "rpn_class_loss": 1.,
+    "rpn_bbox_loss": 1.,
+    "mrcnn_class_loss": 1.,
+    "mrcnn_bbox_loss": 1.,
+    "mrcnn_mask_loss": 3.
+    }
 
 class BladeInferenceConfig(BladeConfig):
     # Set batch size to 1 to run one image at a time
@@ -117,7 +119,9 @@ class BladeInferenceConfig(BladeConfig):
     IMAGE_RESIZE_MODE = "none"
     # Non-max suppression threshold to filter RPN proposals.
     # You can increase this during training to generate more propsals.
-    RPN_NMS_THRESHOLD = 0.7
+    RPN_NMS_THRESHOLD = 0.8
+    DETECTION_MIN_CONFIDENCE = 0.9
+    # USE_MINI_MASK = False
 
 ############################################################
 #  Dataset
@@ -136,15 +140,15 @@ class BladeDataset(utils.Dataset):
         """
         # Add classes. We have one class.
         # Naming the dataset nucleus, and the class nucleus
-        self.add_class("ape", 1, "ape")
+        self.add_class("blade", 1, "blade")
 
         # Which subset?
         # "val": use hard-coded list above
         # "train": use data from stage1_train minus the hard-coded list above
         # else: use the data from the specified sub-directory
-        assert subset in ["train", "val"]
+        assert subset in ["train", "val", "test"]
+        # dataset_dir = os.path.join(dataset_dir, subset, "image")
         dataset_dir = os.path.join(dataset_dir, subset)
-
         # Get image ids from directory names
         image_ids = os.listdir(dataset_dir)
 
@@ -153,7 +157,8 @@ class BladeDataset(utils.Dataset):
             self.add_image(
                 "blade",
                 image_id=image_id,
-                path=os.path.join(dataset_dir, image_id, "images/{}.png".format(image_id)))
+                path=os.path.join(dataset_dir, image_id, "image/{}.jpg".format(image_id)))
+                # path=os.path.join(dataset_dir, image_id, "image/{}.jpg".format(image_id)))
 
     def load_mask(self, image_id):
         """Generate instance masks for an image.
@@ -164,13 +169,20 @@ class BladeDataset(utils.Dataset):
         """
         info = self.image_info[image_id]
         # Get mask directory from image path
-        mask_dir = os.path.join(os.path.dirname(os.path.dirname(info['path'])), "masks")
-
+        # mask_dir = os.path.join(os.path.dirname(os.path.dirname(info['path'])), "masks")
+        mask_dir = os.path.join(os.path.dirname(os.path.dirname(info['path'])), "mask")
+        # mask_dir ="/data/coq18yj/Mask_RCNN/blade/dataset/train/mask"
+                      
         # Read mask files from .png image
         mask = []
         for f in next(os.walk(mask_dir))[2]:
-            if f.endswith(".png"):
-                m = skimage.io.imread(os.path.join(mask_dir, f)).astype(np.bool)
+            if f.endswith(".jpg"):
+            # if f.endswith(".png"):
+                m = skimage.io.imread(os.path.join(mask_dir, f)).astype(np.bool)   
+                if len(m.shape) == 3:
+                    m = m[...,0]
+                # print("mask_shape",m.shape)
+                # print(os.path.join(mask_dir, f)) 
                 mask.append(m)
         mask = np.stack(mask, axis=-1)
         # Return mask, and array of class IDs of each instance. Since we have
@@ -227,11 +239,23 @@ def train(model, dataset_dir, subset):
     print("Train all layers")
     model.train(dataset_train, dataset_val,
                 learning_rate=config.LEARNING_RATE,
-                epochs=40,
+                epochs=100,
                 augmentation=augmentation,
                 layers='all')
 
+    print("Train all layers")
+    model.train(dataset_train, dataset_val,
+                learning_rate=config.LEARNING_RATE/10,
+                epochs=120,
+                augmentation=augmentation,
+                layers='all')
 
+    print("Train all layers")
+    model.train(dataset_train, dataset_val,
+                learning_rate=config.LEARNING_RATE/100,
+                epochs=140,
+                augmentation=augmentation,
+                layers='all')
 ############################################################
 #  RLE Encoding
 ############################################################
@@ -326,7 +350,7 @@ def detect(model, dataset_dir, subset):
         visualize.display_instances(
             image, r['rois'], r['masks'], r['class_ids'],
             dataset.class_names, r['scores'],
-            show_bbox=False, show_mask=False,
+            show_bbox=True, show_mask=True,
             title="Predictions")
         plt.savefig("{}/{}.png".format(submit_dir, dataset.image_info[image_id]["id"]))
 
@@ -377,7 +401,6 @@ if __name__ == '__main__':
     if args.subset:
         print("Subset: ", args.subset)
     print("Logs: ", args.logs)
-
     # Configurations
     if args.command == "train":
         config = BladeConfig()

@@ -10,6 +10,8 @@ Usage: run from the command line as such:
 import open3d as o3d
 import math
 import numpy as np
+import sys
+sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
 import cv2 as cv
 import pandas as pd
 import argparse
@@ -38,10 +40,10 @@ if __name__ == "__main__":
     position_list = []
     color_list = []
 
-
+    sample_num = int(len(drone_gps_data)/3)
     for i in range(0,len(drone_gps_data)):
 
-        if i% 56 == 0: # Change the color for different blade side
+        if i% sample_num == 0: # Change the color for different blade side
             color = colors[color_ind] 
             color_ind = color_ind + 1
 

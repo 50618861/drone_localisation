@@ -2,6 +2,10 @@
 Refinement Algrithm
 
 """
+import matplotlib
+# Agg backend runs without a display
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 from sklearn.neighbors import NearestNeighbors
 import numpy as np
@@ -102,7 +106,7 @@ class refinement():
 
         return mask_rcnn_model
 
-    def blade_mask_detection(self, img, mask_rcnn_model, visulize_mask=False):
+    def blade_mask_detection(self, img, mask_rcnn_model, img_file_name, save_seg_result=True, visulize_mask=False):
 
         r = mask_rcnn_model.detect([img], verbose=0)[0]
         mask = r['masks']
@@ -114,6 +118,9 @@ class refinement():
                 "test", r['scores'],
                 show_bbox=True, show_mask=True,
                 title="Predictions")
+        if save_seg_result:
+            seg = "/media/yixiang/Seagate Expansion Drive/Documents_PR/output/segmentation"
+            plt.savefig("{}/{}.png".format(seg, img_file_name))
 
         return points
 

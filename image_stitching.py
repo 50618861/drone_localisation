@@ -25,6 +25,8 @@ import cv2 as cv
 import refinement
 import math
 
+import matplotlib.pyplot as plt
+
 class Localization():
     def __init__(self):        
         self.intrinsic_matric_K = np.array([
@@ -36,11 +38,10 @@ class Localization():
         self.image_width = 640
         self.image_heigh = 480
 
-        self.tower_height = 63.8
-
-        self.centre_2_blade = 6.3 # The distance from coordinate centre to blade surface
-        self.centre_2_TE = 3.8
-
+        # self.centre_2_blade = 6.3 # The distance from coordinate centre to blade surface
+        # self.centre_2_TE = 3.8
+        self.centre_2_blade = 0 # The distance from coordinate centre to blade surface
+        self.centre_2_TE = 0
 
     def resize (self, img, width, height):
         dim = (width, height)
@@ -100,25 +101,26 @@ class Localization():
         x = -drone_tran[0] * 1000 
         y = drone_tran[1] * 1000
 
-        if blade_side == "LeadingEdge":
-            z = (drone_tran[2] - self.centre_2_blade) * 1000
-        elif blade_side == "TrailingEdge":
-            z = (drone_tran[2] + self.centre_2_TE) * 1000
+        # if blade_side == "LeadingEdge":
+        #     z = (drone_tran[2] - self.centre_2_blade) * 1000
+        # elif blade_side == "TrailingEdge":
+        #     z = (drone_tran[2] + self.centre_2_TE) * 1000
 
-        else:
-            z = distance * 1000
-            x,y = self.correction_with_rotation(drone_rot,x,y,z,blade_position,yaw)
+        # else:
+        #     z = distance * 1000
+        #     x,y = self.correction_with_rotation(drone_rot,x,y,z,blade_position,yaw)
 
+        z = distance * 1000
+        x,y = self.correction_with_rotation(drone_rot,x,y,z,blade_position,yaw)
 
         move_x = int((x/z) * self.intrinsic_matric_K[0,0])
         move_y = int((y/z) * self.intrinsic_matric_K[1,1])
     
-
+        print(move_x,move_y)
         image_location.append([move_x,move_y])
        
 
     def stitching(self, init_img,img, move_x,move_y,pre_image_location):
-                    
         if move_x < -self.image_width:
             move_x = -self.image_width
         elif move_x > self.image_width:
@@ -181,9 +183,9 @@ class Localization():
                 image = image_stitching.get_img(drone_gps_data,i)
 
                 cam_position_trans = image_stitching.world_2_camera(cam_position,cam_rotation)
-                print("init_pose:",cam_position_trans)
+                # print("init_pose:",cam_position_trans)
                 if args.refinement == 'True':                    
-                    detected_blade = refinment.blade_mask_detection(image,mask_rcnn_model)
+                    detected_blade = refinment.blade_mask_detection(image,mask_rcnn_model,drone_gps_data[i][4])
                     cam_position_trans, cam_rotation = refinment.cam_refinment(image_stitching.intrinsic_matric_K,cam_position_trans, cam_rotation,image,model,detected_blade,args.visulization == 'True')
             else:
                 cur_cam_position = image_stitching.get_cam_pos(drone_gps_data,i)    
@@ -194,11 +196,11 @@ class Localization():
                 print("cur_cam_position_trans before refinement",cur_cam_position_trans)
                 
                 cur_image = image_stitching.get_img(drone_gps_data,i)
-
                 if args.refinement == 'True':
-                    detected_blade = refinment.blade_mask_detection(cur_image,mask_rcnn_model)
+                    detected_blade = refinment.blade_mask_detection(cur_image,mask_rcnn_model,drone_gps_data[i][4])
                     cur_cam_position_trans, cur_cam_rotation = refinment.cam_refinment(image_stitching.intrinsic_matric_K,cur_cam_position_trans,cur_cam_rotation,cur_image,model,detected_blade,args.visulization == 'True')
-                    cv.imwrite(os.path.join(args.output + drone_gps_data[i][4], cur_image))
+                    print("cur_cam_position_trans after refinement",cur_cam_position_trans)
+                    cv.imwrite(os.path.join(args.output, drone_gps_data[i][4]), cur_image)
 
                 cam_move = image_stitching.calcu_cam_move(cur_cam_position_trans,cam_position_trans)
                 rot_move = np.array(cur_cam_rotation) - np.array(cam_rotation)
@@ -213,7 +215,8 @@ class Localization():
 
         image_location = np.asarray(image_location)
 
-        average_x, average_y = int(np.mean(image_location, axis=0)[0]),int(np.mean(image_location, axis=0)[1])
+        # average_x, average_y = int(np.mean(image_location, axis=0)[0]),int(np.mean(image_location, axis=0)[1])
+        average_x, average_y = int(np.median(image_location, axis=0)[0]),int(np.median(image_location, axis=0)[1])
         init_img = image_stitching.get_img(drone_gps_data,img_id[0])
         pre_image_location = [0,0]
         for i in range(len(image_location)):
@@ -264,16 +267,18 @@ if __name__ == '__main__':
                         metavar="/path/to/drone/point_cloud_model/",
                         help='Load the point cloud model')
 
-    parser.add_argument('--num_sampling', required=False,
-                        default=14,
-                        help="The number of data collect for one blade")
+    # parser.add_argument('--num_sampling', required=False,
+    #                     default=14,
+    #                     help="The number of data collect for one blade")
 
-
+    
 
     args = parser.parse_args()
     
     drone_gps_data = pd.read_excel(args.dataset)
     drone_gps_data = drone_gps_data.values
+
+    num_sampling = int(len(drone_gps_data)/12)
 
     image_data_path = os.path.dirname(args.dataset)
 
@@ -285,28 +290,27 @@ if __name__ == '__main__':
         model = o3d.io.read_point_cloud(args.point_cloud_model_path)
         print(args.point_cloud_model_path)
         rot = model.get_rotation_matrix_from_xyz((np.pi / 2,0,0))
-        # model = model.rotate(rot, center=(0, 0, 0)) #for open3d == 0.13.0
         model = model.rotate(rot, center=False) #for open3d == 0.9.0
         refinment = refinement.refinement()
         mask_rcnn_model = refinment.load_mrcnn(args.weight)
 
     if args.beg is None:
         if args.refinement == 'True':
-            for n in range(0,len(drone_gps_data),args.num_sampling):
+            for n in range(0,len(drone_gps_data),num_sampling):
                 if drone_gps_data[n][3] == "LeadingEdge" or drone_gps_data[n][3] == "TrailingEdge":
-                    beg, end = n + 3, n + args.num_sampling
+                    beg, end = n + 3, n + num_sampling
                 elif drone_gps_data[n][3] == "PressureSide" or drone_gps_data[n][3] == "SuctionSide":
-                    beg, end = n, n + args.num_sampling -3
+                    beg, end = n, n + num_sampling -3
 
                 cam_position = []
                 image_location = []
                 image_stitching.processing_sequence(beg,end,cam_position,image_location)
-
-        for n in range(0,len(drone_gps_data),args.num_sampling):
-            image_location = []
-            beg, end = n, n + args.num_sampling
-            cam_position = []
-            image_stitching.processing_sequence(beg,end,cam_position,image_location)
+        else:
+            for n in range(0,len(drone_gps_data),num_sampling):
+                image_location = []
+                beg, end = n, n + num_sampling
+                cam_position = []
+                image_stitching.processing_sequence(beg,end,cam_position,image_location)
     else:
         beg, end = int(args.beg), int(args.end)
         cam_position = []
