@@ -106,7 +106,7 @@ class refinement():
 
         return mask_rcnn_model
 
-    def blade_mask_detection(self, img, mask_rcnn_model, img_file_name, save_seg_result=True, visulize_mask=False):
+    def blade_mask_detection(self, img, mask_rcnn_model, img_file_name, save_seg_result=False, visulize_mask=False):
 
         r = mask_rcnn_model.detect([img], verbose=0)[0]
         mask = r['masks']
